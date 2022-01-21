@@ -64,7 +64,7 @@ then
 fi
 
 
-if [ `test -f  /etc/easy-rsa/$ca/pki/issued/$user.crt` ]
+if [ -f /etc/easy-rsa/$ca/pki/issued/$user.crt ]
 then
 	echo Using exist certificate!
 else
