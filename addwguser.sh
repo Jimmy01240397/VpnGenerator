@@ -16,7 +16,7 @@ do
         nowarg=$1
         case "$nowarg" in
 	        -h)
-                        echo "addwguser.sh -s <ServerConfPath> -u <username> -f <fqdn>"
+                        echo "addwguser.sh -s <ServerConfPath> -u <username> -f <fqdn> -r <clientroute>"
                         exit 0
                         ;;
                 -s)
@@ -31,6 +31,10 @@ do
                         shift
                         fqdn=$1
                         ;;
+		-r)
+                        shift
+                        route=$1
+                        ;;
                 *)
                         if [ "$nowarg" = "" ]
                         then
@@ -43,9 +47,10 @@ do
         shift
 done
 
-if [ "$serverconf" = "" ] || [ "$user" = "" ] || [ "$fqdn" = "" ]
+if [ "$serverconf" = "" ] || [ "$user" = "" ] || [ "$fqdn" = "" ] || [ "$route" = "" ]
 then
 	echo "Missing arg..."
+	exit 0
 fi
 
 function atoi
@@ -68,8 +73,16 @@ function itoa
 	echo $((${1}%256)) 
 }
 
-nowip=`atoi $(grep AllowedIPs $serverconf | grep -oP '(?<=AllowedIPs\s=\s)\d+(\.\d+){3}' | tail -n 1)`
+nowip=$(grep AllowedIPs $serverconf | grep -oP '(?<=AllowedIPs\s=\s)\d+(\.\d+){3}' | tail -n 1)
 nowmask=`grep Address $serverconf | grep -oP '(?<=Address\s=\s)\d+(\.\d+){3}\K/\d+' | tail -n 1`
+
+if [ "$nowip" == "" ]
+then
+    nowip=$(($(atoi $(grep Address $serverconf | grep -oP '(?<=Address\s=\s)\d+(\.\d+){3}' | tail -n 1))&$((2#$(printf '%*s' "$(echo $nowmask | cut -c 2-)" | sed "s/ /1/g")$(printf "%0$((32-$(echo $nowmask | cut -c 2-)))d" 0)))))
+else
+    nowip=$(atoi $nowip)
+fi
+
 nowpsk=`wg genpsk`
 nowprk=`wg genkey`
 nowpuk=`echo $nowprk | wg pubkey`
@@ -77,6 +90,11 @@ serverport=`grep ListenPort $serverconf | grep -oP '(?<=ListenPort\s=\s)\d+' | t
 serverpuk=`grep PrivateKey $serverconf | grep -oP '(?<=PrivateKey\s=\s).*' | tail -n 1 | wg pubkey`
 
 ((nowip++))
+
+if [ $nowip -eq $(atoi $(grep Address $serverconf | grep -oP '(?<=Address\s=\s)\d+(\.\d+){3}' | tail -n 1)) ]
+then
+    ((nowip++))
+fi
 
 echo "" >> $serverconf
 echo [Peer] >> $serverconf
@@ -92,7 +110,7 @@ echo "Address = $(itoa $nowip)$nowmask" >> /etc/wireguard/client/$user.conf
 echo "PrivateKey = $nowprk" >> /etc/wireguard/client/$user.conf
 echo "" >> /etc/wireguard/client/$user.conf
 echo [Peer] >> /etc/wireguard/client/$user.conf
-echo "AllowedIPs = 192.168.100.254/32" >> /etc/wireguard/client/$user.conf
+echo "AllowedIPs = $route" >> /etc/wireguard/client/$user.conf
 echo "Endpoint = $fqdn:$serverport" >> /etc/wireguard/client/$user.conf
 echo "PreSharedKey = $nowpsk" >> /etc/wireguard/client/$user.conf
 echo "PublicKey = $serverpuk" >> /etc/wireguard/client/$user.conf
