@@ -114,6 +114,7 @@ echo "AllowedIPs = $route" >> /etc/wireguard/client/$user.conf
 echo "Endpoint = $fqdn:$serverport" >> /etc/wireguard/client/$user.conf
 echo "PreSharedKey = $nowpsk" >> /etc/wireguard/client/$user.conf
 echo "PublicKey = $serverpuk" >> /etc/wireguard/client/$user.conf
+echo "PersistentKeepalive = 1" >> /etc/wireguard/client/$user.conf
 
 
 sed '/Address/d' $serverconf > /tmp/wgconf.conf
