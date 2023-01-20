@@ -50,4 +50,4 @@ then
     printhelp
 fi
 
-ansible-playbook $dirpath/ansible/addwgserver/setup.yml -e "{\"servername\":\"$servername\",\"addresses\":\"$addresses\",\"serverport\":\"$port\",\"moreconfig\":\"$moreconfig\"}"
+ansible-playbook $dirpath/roles/addwgserver/setup.yml -e "{\"servername\":\"$servername\",\"addresses\":\"$addresses\",\"serverport\":\"$port\",\"moreconfig\":\"$moreconfig\"}"

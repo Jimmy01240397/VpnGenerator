@@ -79,4 +79,4 @@ then
     serverconfpath=$(readlink -f $serverconfpath)
 fi
 
-ansible-playbook $dirpath/ansible/addwguser/setup.yml -e "{\"serverconfig\":\"$serverconfpath\",\"username\":\"$username\",\"fqdn\":\"$fqdn\",\"routes\":\"$routes\",\"addresses\":\"$addresses\",\"clientconfigdir\":\"$clientconfdir\",\"nameserver\":\"$nameserver\",\"moreconfig\":\"$moreconfig\"}"
+ansible-playbook $dirpath/roles/addwguser/setup.yml -e "{\"serverconfig\":\"$serverconfpath\",\"username\":\"$username\",\"fqdn\":\"$fqdn\",\"routes\":\"$routes\",\"addresses\":\"$addresses\",\"clientconfigdir\":\"$clientconfdir\",\"nameserver\":\"$nameserver\",\"moreconfig\":\"$moreconfig\"}"
