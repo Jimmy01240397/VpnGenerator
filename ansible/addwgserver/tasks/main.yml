@@ -1,0 +1,23 @@
+- name: Init os var for freebsd
+  include_vars: vars/freebsd.yml
+  when: ansible_distribution|lower == "freebsd"
+
+- name: Init os var for linux
+  include_vars: vars/linux.yml
+  when: ansible_distribution|lower == "debian" or ansible_distribution|lower == "ubuntu" or ansible_distribution|lower == "centos" or ansible_distribution|lower == "redhat"
+
+- name: Check server exist
+  stat:
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
+  register: serverconf
+
+- name: Generated private key
+  command: wg genkey
+  register: privkey
+  when: not serverconf.stat.exists
+
+- name: Init server conf
+  template:
+    src: templates/server.conf
+    dest: "{{ wireguarddir }}/{{ servername }}.conf"
+  when: not serverconf.stat.exists

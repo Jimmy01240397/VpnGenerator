@@ -1,0 +1,69 @@
+- name: Init os var for freebsd
+  include_vars: vars/freebsd.yml
+  when: ansible_distribution|lower == "freebsd"
+
+- name: Init os var for linux
+  include_vars: vars/linux.yml
+  when: ansible_distribution|lower == "debian" or ansible_distribution|lower == "ubuntu" or ansible_distribution|lower == "centos" or ansible_distribution|lower == "redhat"
+
+- name: Check server exist and user exist
+  lineinfile:
+    path: "{{ serverconfig }}"
+    regexp: "^(# BEGIN {{ username }}|# {{ username }})$"
+    line: ""
+    state: present
+  check_mode: true
+  register: serverconfexist
+  failed_when: serverconfexist is changed
+    #ignore_errors: yes
+  
+- name: split addresses
+  set_fact:
+    addresseslist: "{{ addresses.split(',') }}"
+
+- name: Get server ips
+  set_fact:
+    serverips: "{{ lookup('file', '{{ serverconfig }}') | regex_search('Address\\s*=\\s*(.*)', '\\1') | first }}"
+
+- name: Set client ips
+  set_fact:
+    clientips: []
+    serverrouteforclient: []
+
+- name: Set all ips
+  include_tasks: "setclientips.yml"
+  loop: "{{ serverips.split(',') }}"
+  loop_control:
+    loop_var: serveriptmp
+
+- name: Generated client private key
+  command: wg genkey
+  register: privkey
+
+- name: Generated client public key
+  shell: echo "{{ privkey.stdout }}" | wg pubkey
+  register: clientpublic
+
+- name: Generated server public key
+  shell: "echo {{ lookup('file', serverconfig) | regex_search('PrivateKey\\s*=\\s*(.*)', '\\1') | first }} | wg pubkey"
+  register: serverpublic
+
+- name: Generated preshare key
+  command: wg genpsk
+  register: presharekey
+
+- name: Get server port
+  set_fact:
+    serverport: "{{ lookup('file', '{{ serverconfig }}') | regex_search('ListenPort\\s*=\\s*(.*)', '\\1') | first }}"
+
+- name: Init client conf
+  template:
+    src: templates/client.conf
+    dest: "{{ wireguarddir }}/{{ clientconfigdir }}/{{ username }}.conf"
+
+- name: Add peer
+  blockinfile:
+    path: "{{ serverconfig }}"
+    block: "{{ lookup('template', 'templates/peer.conf') }}"
+    marker: "# {mark} {{ username }}"
+

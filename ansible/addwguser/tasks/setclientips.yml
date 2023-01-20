@@ -1,0 +1,59 @@
+- name: Set now ip init
+  set_fact:
+    nowip: ""
+
+- name: ipv6 first random
+  shell: xxd -l "{{ (128 - (serveriptmp | ipaddr('prefix'))) / 8 }}" -ps /dev/urandom
+  register: getcount6init
+
+- name: Set now ip
+  set_fact:
+    nowip: "{% if item != '' and (serveriptmp | ipaddr('subnet')) == ((item+'/'+(serveriptmp | ipaddr('prefix') | string)) | ipaddr('subnet')) %}{{ item+'/'+(serveriptmp | ipaddr('prefix') | string) }}{% elif item == '' and (serveriptmp | ipv4) %}{{ serveriptmp | ipaddr('subnet') | ipaddr('1') }}{% elif item == '' and (serveriptmp | ipv6) %}{{ serveriptmp | ipaddr('subnet') | ipaddr(getcount6init.stdout | int(base=16) | string) }}{% else %}{{''}}{% endif %}"
+  when: nowip == ""
+  with_items: 
+    - "{{ addresseslist + [''] }}"
+
+- name: Init Choose IP address
+  shell: if [ -e /tmp/.temp.conf ]; then rm /tmp/.temp.conf; fi
+
+- name: Choose IP address (ipv4)
+  shell: if [ -f /tmp/.temp.conf ]; then tmp=$(($(cat /tmp/.temp.conf) + 1)) && echo $tmp | tee /tmp/.temp.conf; else echo 0 | tee /tmp/.temp.conf; fi
+  register: getcount4
+  until: ((nowip | next_nth_usable(getcount4.stdout | int)) == "") or ((lookup('file', serverconfig) | regex_search('(AllowedIPs|Address)\\s*=\\s*.*('+((nowip | next_nth_usable(getcount4.stdout | int)).replace('.', '\\.'))+')/.*', '\\2')) is none)
+  retries: "{{ serveriptmp | ipaddr('size') }}"
+  delay: 0
+  when: (serveriptmp | ipv4) and nowip and ((lookup('file', serverconfig) | regex_search('(AllowedIPs|Address)\\s*=\\s*.*('+(nowip.replace('.', '\\.') | regex_replace('/.*', ''))+')/.*', '\\2')) is not none)
+
+- name: Choose IP address (ipv6)
+  #shell: xxd -l 8 -ps /dev/urandom | sed 's/.\{4\}/&:/g' | sed 's/:$//g'
+  shell: xxd -l "{{ (128 - (serveriptmp | ipaddr('prefix'))) / 8 }}" -ps /dev/urandom
+  register: getcount6
+  until: ((nowip | ipaddr(getcount6.stdout | int(base=16) | string) | regex_replace('/.*', '')) == "") or ((lookup('file', serverconfig) | regex_search('(AllowedIPs|Address)\\s*=\\s*.*('+((nowip | ipaddr(getcount6.stdout | int(base=16) | string) | regex_replace('/.*', '')).replace('.', '\\.'))+')/.*', '\\2')) is none)
+  retries: 9999
+  delay: 0
+  when: (serveriptmp | ipv6) and nowip and ((lookup('file', serverconfig) | regex_search('(AllowedIPs|Address)\\s*=\\s*.*('+(nowip.replace('.', '\\.') | regex_replace('/.*', ''))+')/.*', '\\2')) is not none)
+
+- name: Set new nowip (ipv4)
+  set_fact:
+    nowip: "{{ nowip | next_nth_usable(getcount4.stdout | int) }}/{{ nowip | ipaddr('prefix') }}"
+  when: (serveriptmp | ipv4) and "stdout" in getcount4
+
+- name: Set new nowip (ipv6)
+  set_fact:
+    nowip: "{{ nowip | ipaddr(getcount6.stdout | int(base=16) | string) }}"
+  when: (serveriptmp | ipv6) and "stdout" in getcount6
+
+- name: Add client ips
+  set_fact:
+    clientips: "{{ clientips + [nowip] }}"
+  when: (serveriptmp | ipaddr('subnet')) == (nowip | ipaddr('subnet'))
+
+- name: Add serverrouteforclient ips (ipv4)
+  set_fact:
+    serverrouteforclient: "{{ serverrouteforclient + [nowip | regex_replace('/.*', '/32')] }}"
+  when: (serveriptmp | ipaddr('subnet')) == (nowip | ipaddr('subnet')) and (nowip | ipv4)
+
+- name: Add serverrouteforclient ips (ipv6)
+  set_fact:
+    serverrouteforclient: "{{ serverrouteforclient + [nowip | regex_replace('/.*', '/128')] }}"
+  when: (serveriptmp | ipaddr('subnet')) == (nowip | ipaddr('subnet')) and (nowip | ipv6)

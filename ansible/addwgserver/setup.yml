@@ -1,0 +1,11 @@
+- hosts: localhost
+  vars_files:
+    - defaults/main.yml
+
+  roles: []
+
+  tasks:
+    - name: include main task
+      include: tasks/main.yml
+
+  handlers: []
