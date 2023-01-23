@@ -1,4 +1,4 @@
-- name: Init os var for freebsd
+- name: Init os var
   include_vars: "vars/{{ ansible_system | lower }}.yml"
 
 - name: Check server exist
