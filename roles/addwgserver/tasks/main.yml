@@ -15,4 +15,5 @@
   template:
     src: templates/server.conf
     dest: "{{ wireguarddir }}/{{ servername }}.conf"
+  become: true
   when: not serverconf.stat.exists

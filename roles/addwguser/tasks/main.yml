@@ -8,17 +8,24 @@
     line: ""
     state: present
   check_mode: true
+  become: true
   register: serverconfexist
-  failed_when: serverconfexist is changed
+  failed_when: serverconfexist is changed or "rc" in serverconfexist
     #ignore_errors: yes
-  
+
 - name: split addresses
   set_fact:
     addresseslist: "{{ addresses.split(',') }}"
 
+- name: Read server config
+  slurp:
+    path: "{{ serverconfig }}"
+  become: true
+  register: serverconfigcontent
+
 - name: Get server ips
   set_fact:
-    serverips: "{{ lookup('file', '{{ serverconfig }}') | regex_search('Address\\s*=\\s*(.*)', '\\1') | first }}"
+    serverips: "{{ serverconfigcontent.content | b64decode | regex_search('Address\\s*=\\s*(.*)', '\\1') | first }}"
 
 - name: Set client ips
   set_fact:
@@ -40,7 +47,7 @@
   register: clientpublic
 
 - name: Generated server public key
-  shell: "echo {{ lookup('file', serverconfig) | regex_search('PrivateKey\\s*=\\s*(.*)', '\\1') | first }} | wg pubkey"
+  shell: "echo {{ serverconfigcontent.content | b64decode | regex_search('PrivateKey\\s*=\\s*(.*)', '\\1') | first }} | wg pubkey"
   register: serverpublic
 
 - name: Generated preshare key
@@ -49,16 +56,18 @@
 
 - name: Get server port
   set_fact:
-    serverport: "{{ lookup('file', '{{ serverconfig }}') | regex_search('ListenPort\\s*=\\s*(.*)', '\\1') | first }}"
+    serverport: "{{ serverconfigcontent.content | b64decode | regex_search('ListenPort\\s*=\\s*(.*)', '\\1') | first }}"
 
 - name: Init client conf
   template:
     src: templates/client.conf
     dest: "{{ wireguarddir }}/{{ clientconfigdir }}/{{ username }}.conf"
+  become: true
 
 - name: Add peer
   blockinfile:
     path: "{{ serverconfig }}"
     block: "{{ lookup('template', 'templates/peer.conf') }}"
     marker: "# {mark} {{ username }}"
+  become: true
 
