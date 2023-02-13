@@ -1,0 +1,20 @@
+- name: Init os var
+  include_vars: "vars/{{ ansible_system | lower }}.yml"
+
+- name: Check server exist
+  stat:
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
+  become: true
+  register: serverconf
+  failed_when: not serverconf.stat.exists
+
+- name: Stop VPN
+  command: "wg-quick down {{ servername }}"
+  become: true
+  ignore_errors: yes
+
+- name: Delete client conf
+  file:
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
+    state: absent
+  become: true

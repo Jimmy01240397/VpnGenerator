@@ -5,7 +5,7 @@ printhelp()
 	echo "Usage: $0 [options]
 Options:
   -h, --help                                    display this help message and exit.
-  -s, --serverconfpath SERVERCONFIGPATH         Server config path of VPN server.
+  -s, --servername SERVERNAME                   Server name of VPN server.
   -u, --username USERNAME                       Username of VPN client.
   -f, --fqdn FQDN                               Server FQDN.
   -r, --routes CLIENTROUTES1,CLIENTROUTES2...   VPN route for VPN client.
@@ -18,7 +18,7 @@ Options:
 
 dirpath=$(dirname "$0")
 
-serverconfpath=""
+servername=""
 username=""
 fqdn=""
 routes=""
@@ -33,9 +33,9 @@ do
         -h|--help)
             printhelp
             ;;
-        -s|--serverconfpath)
+        -s|--servername)
             shift
-            serverconfpath=$1
+            servername=$1
             ;;
         -u|--username)
             shift
@@ -69,14 +69,9 @@ do
     shift
 done
 
-if [ "$serverconfpath" == "" ] || [ "$username" == "" ] || [ "$fqdn" == "" ] || [ "$routes" == "" ]
+if [ "$servername" == "" ] || [ "$username" == "" ] || [ "$fqdn" == "" ] || [ "$routes" == "" ]
 then
     printhelp
 fi
 
-if [ "$(readlink -f $serverconfpath)" != "" ]
-then
-    serverconfpath=$(readlink -f $serverconfpath)
-fi
-
-ansible-playbook $dirpath/roles/addwguser/setup.yml -e "{\"serverconfig\":\"$serverconfpath\",\"username\":\"$username\",\"fqdn\":\"$fqdn\",\"routes\":\"$routes\",\"addresses\":\"$addresses\",\"clientconfigdir\":\"$clientconfdir\",\"nameserver\":\"$nameserver\",\"moreconfig\":\"$moreconfig\"}"
+ansible-playbook $dirpath/roles/addwguser/setup.yml -e "{\"servername\":\"$servername\",\"username\":\"$username\",\"fqdn\":\"$fqdn\",\"routes\":\"$routes\",\"addresses\":\"$addresses\",\"clientconfigdir\":\"$clientconfdir\",\"nameserver\":\"$nameserver\",\"moreconfig\":\"$moreconfig\"}"

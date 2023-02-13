@@ -1,4 +1,4 @@
-serverconfig: /etc/wireguard/server.conf
+servername: server
 username: "test"
 fqdn: "www.example.com"
 routes: "0.0.0.0/0"

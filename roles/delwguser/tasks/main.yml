@@ -1,0 +1,39 @@
+- name: Init os var
+  include_vars: "vars/{{ ansible_system | lower }}.yml"
+
+- name: Check server exist and user exist
+  lineinfile:
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
+    regexp: "^(# BEGIN {{ username }}|# {{ username }})$"
+    line: ""
+    state: present
+  check_mode: true
+  become: true
+  register: serverconfexist
+  failed_when: serverconfexist is not changed or "rc" in serverconfexist
+    #ignore_errors: yes
+
+- name: Check client conf exists
+  stat:
+    path: "{{ wireguarddir }}/{{ clientconfigdir }}/{{ username }}.conf"
+  become: true
+  register: clientexist
+
+- name: Delete client conf
+  file:
+    path: "{{ wireguarddir }}/{{ clientconfigdir }}/{{ username }}.conf"
+    state: absent
+  when: clientexist.stat.exists and clientconfigdir != ""
+  become: true
+
+- name: Delete peer
+  blockinfile:
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
+    marker: "# {mark} {{ username }}"
+    state: "absent"
+  become: true
+
+- name: Reload VPN
+  command: "wg syncconf {{ servername }} <(wg-quick strip {{ servername }})"
+  become: true
+  ignore_errors: yes

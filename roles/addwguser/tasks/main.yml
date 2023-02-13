@@ -3,7 +3,7 @@
 
 - name: Check server exist and user exist
   lineinfile:
-    path: "{{ serverconfig }}"
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
     regexp: "^(# BEGIN {{ username }}|# {{ username }})$"
     line: ""
     state: present
@@ -19,7 +19,7 @@
 
 - name: Read server config
   slurp:
-    path: "{{ serverconfig }}"
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
   become: true
   register: serverconfigcontent
 
@@ -71,8 +71,13 @@
 
 - name: Add peer
   blockinfile:
-    path: "{{ serverconfig }}"
+    path: "{{ wireguarddir }}/{{ servername }}.conf"
     block: "{{ lookup('template', 'templates/peer.conf') }}"
     marker: "# {mark} {{ username }}"
   become: true
+
+- name: Reload VPN
+  command: "wg syncconf {{ servername }} <(wg-quick strip {{ servername }})"
+  become: true
+  ignore_errors: yes
 

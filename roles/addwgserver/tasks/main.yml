@@ -4,16 +4,16 @@
 - name: Check server exist
   stat:
     path: "{{ wireguarddir }}/{{ servername }}.conf"
+  become: true
   register: serverconf
+  failed_when: serverconf.stat.exists
 
 - name: Generated private key
   command: wg genkey
   register: privkey
-  when: not serverconf.stat.exists
 
 - name: Init server conf
   template:
     src: templates/server.conf
     dest: "{{ wireguarddir }}/{{ servername }}.conf"
   become: true
-  when: not serverconf.stat.exists
