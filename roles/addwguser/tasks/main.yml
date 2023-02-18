@@ -78,7 +78,7 @@
   become: true
 
 - name: Reload VPN
-  shell: "wg syncconf {{ servername }} <(wg-quick strip {{ servername }})"
+  shell: "bash -c \"wg syncconf {{ servername }} <(wg-quick strip {{ servername }})\""
   become: true
   ignore_errors: yes
 
