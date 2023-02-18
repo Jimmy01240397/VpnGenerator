@@ -59,7 +59,8 @@
     serverport: "{{ serverconfigcontent.content | b64decode | regex_search('ListenPort\\s*=\\s*(.*)', '\\1') | first }}"
 
 - name: Make VPN client directory
-  file: "{{ wireguarddir }}/{{ clientconfigdir }}"
+  file: 
+    path: "{{ wireguarddir }}/{{ clientconfigdir }}"
     state: directory
   become: true
   
