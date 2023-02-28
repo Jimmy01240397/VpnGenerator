@@ -34,7 +34,7 @@
 
 - name: Set all ips
   include_tasks: "setclientips.yml"
-  loop: "{{ serverips.split(',') }}"
+  loop: "{{ serverips.split(',') | map('trim') }}"
   loop_control:
     loop_var: serveriptmp
 
