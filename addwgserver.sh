@@ -12,7 +12,7 @@ Options:
 	exit 1
 }
 
-dirpath=$(dirname "$0")
+dirpath=$(dirname "$(readlink -f "$0")")
 
 servername=""
 addresses=""
